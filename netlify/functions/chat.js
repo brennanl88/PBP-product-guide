@@ -382,7 +382,7 @@ If stored with Pump Armor or antifreeze:
 - Be direct and practical. Skip the throat-clearing.
 - Give a clear recommendation first, then explain why.
 - If the answer involves a specific product, name it and say why PBP uses it.
-- If you need to search the web for current product info, application specs, or troubleshooting, do it.
+- If you need current product info not in your knowledge base, say so and recommend the crew check with their SW or BM rep.
 - If something is outside PBP's normal scope, say so clearly and give your best advice anyway.
 - Keep responses focused — answer the actual question, don't dump everything you know.
 - If the situation is a callback risk or quality issue, flag it directly.`;
@@ -393,56 +393,17 @@ If stored with Pump Armor or antifreeze:
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05'
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         system: SYSTEM_PROMPT,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: body.messages
       })
     });
 
     const data = await anthropicRes.json();
-
-    // If tool use, do a follow-up turn
-    if (data.stop_reason === 'tool_use') {
-      const toolResults = data.content
-        .filter(b => b.type === 'tool_use')
-        .map(b => ({ type: 'tool_result', tool_use_id: b.id, content: 'Search results retrieved.' }));
-
-      const followMessages = [
-        ...body.messages,
-        { role: 'assistant', content: data.content },
-        { role: 'user', content: toolResults }
-      ];
-
-      const followRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-beta': 'web-search-2025-03-05'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: SYSTEM_PROMPT,
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-          messages: followMessages
-        })
-      });
-
-      const followData = await followRes.json();
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...followData, used_search: true })
-      };
-    }
 
     return {
       statusCode: 200,
